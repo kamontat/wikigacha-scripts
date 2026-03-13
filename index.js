@@ -21,6 +21,7 @@ const RETRY_ATTEMPTS = 5;
 const RETRY_INIT_DELAY = 5000; // 5 seconds
 const RETRY_MAX_DELAY = 60000; // 1 minute
 const RETRY_FACTOR = 1.5 // Exponential backoff factor
+const RETRY_HTTP_CODE = [429, 500]
 
 const DELAY_MIN = 1500; // 1.5 second
 const DELAY_MAX = 8000; // 8 seconds
@@ -170,9 +171,9 @@ const fetchCards = async (packState) => {
         }),
         "method": "POST",
       });
-      if (resp.status === 429) {
+      if (RETRY_HTTP_CODE.includes(resp.status)) {
         const duration = delay(RETRY_INIT_DELAY, i);
-        warn('API', `Got 429, wait for ${duration} ms`);
+        warn('API', `Got ${resp.status}, wait for ${duration} ms`);
         await wait(duration);
         continue;
       }
