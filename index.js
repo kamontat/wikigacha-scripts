@@ -22,8 +22,10 @@ const RETRY_INIT_DELAY = 5000; // 5 seconds
 const RETRY_MAX_DELAY = 60000; // 1 minute
 const RETRY_FACTOR = 1.5 // Exponential backoff factor
 
-const DELAY_MIN = 3000; // 3 seconds
-const DELAY_MAX = 10000; // 10 seconds
+const DELAY_MIN = 1500; // 1.5 second
+const DELAY_MAX = 8000; // 8 seconds
+
+const SUMMARY_INTERVAL = 10; // Show summary every 10 iterations
 
 /** @type {'en' | 'jp'} */
 const LANGUAGE = 'en';
@@ -245,6 +247,11 @@ const mainLoop = async (times = 1) => {
   info('MAIN', `Starting main loop`);
   const db = await getDB();
   let packState = await loadPackState(db);
+  let group = 1
+
+  const rarityList = ['LR', 'UR', 'SSR', 'SR', 'R', 'UC', 'C'];
+  const rarities = new Map(rarityList.map(rarity => [rarity, 0]));
+  console.groupCollapsed(`Iteration #${group}`)
   for (let i = 0; i < times; i++) {
     debug('MAIN', `Starting iteration #${i + 1}...`);
     debug('MAIN', 'packState', packState);
@@ -254,19 +261,30 @@ const mainLoop = async (times = 1) => {
 
     const store = getStore(db, `cards_${LANGUAGE}`, 'readwrite');
     const cards = await addCards(store, resp.cards);
-    /** @type {Map<string, Card[]>} */
-    const emptyMap = new Map()
-    const map = cards.reduce((map, card) => map.set(card.rarity_rank, (map.get(card.rarity_rank) ?? []).concat(card)), emptyMap);
-    map.forEach((cards, rarity) => {
-      info('CARD', `Rarity: ${rarity.padEnd(3, ' ')} ${cards.length}`);
-    });
+    cards.forEach((card) => rarities.set(card.rarity_rank, rarities.get(card.rarity_rank) + 1));
 
-    const duration = randomDelay();
-    info('MAIN', `Iteration #${i + 1} completed, waiting ${duration} ms for next iteration...`);
-    await wait(duration);
+    if ((i + 1) % SUMMARY_INTERVAL === 0) {
+      info('MAIN', `Summary after ${i + 1} iterations:`);
+      console.table(Object.fromEntries(rarities));
+      console.groupEnd();
+      group++;
+      console.groupCollapsed(`Iteration #${group}`);
+    }
+
+    if (i < times - 1) {
+      const duration = randomDelay();
+      info('MAIN', `Iteration #${i + 1} completed, waiting ${duration} ms for next iteration...`);
+      await wait(duration);
+    }
   }
+
+  if ((times) % SUMMARY_INTERVAL !== 0) {
+    console.table(Object.fromEntries(rarities));
+  }
+  console.groupEnd();
 
   info('MAIN', 'Main loop completed');
 }
 
+clear();
 // await mainLoop(1);
