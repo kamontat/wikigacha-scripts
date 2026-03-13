@@ -230,19 +230,21 @@ const mainLoop = async (times = 1) => {
   const db = await getDB();
   let packState = await loadPackState(db);
   for (let i = 0; i < times; i++) {
-    info('MAIN', `Starting iteration #${i + 1}...`);
+    debug('MAIN', `Starting iteration #${i + 1}...`);
     debug('MAIN', 'packState', packState);
 
     const resp = await fetchCards(packState);
-    const store = getStore(db, 'cards_en', 'readwrite');
-    const cards = await addCards(store, resp.cards);
-    cards.forEach(card => {
-      info('CARD', `${card.rarity_rank.padEnd(3, ' ')} ${card.title}`);
-    });
-
     packState = resp.packState;
 
-    const duration = randomDelay();
+    const store = getStore(db, 'cards_en', 'readwrite');
+    const cards = await addCards(store, resp.cards);
+    /** @type {Map<string, Card[]>} */
+    const emptyMap = new Map()
+    const map = cards.reduce((map, card) => map.set(card.rarity_rank, (map.get(card.rarity_rank) ?? []).concat(card)), emptyMap);
+    map.forEach((cards, rarity) => {
+      info('CARD', `Rarity: ${rarity.padEnd(3, ' ')} ${cards.length}`);
+    });
+
     info('MAIN', `Iteration #${i + 1} completed, waiting ${duration} ms for next iteration...`);
     await wait(duration);
   }
