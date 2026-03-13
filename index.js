@@ -25,6 +25,9 @@ const RETRY_FACTOR = 1.5 // Exponential backoff factor
 const DELAY_MIN = 3000; // 3 seconds
 const DELAY_MAX = 10000; // 10 seconds
 
+/** @type {'en' | 'jp'} */
+const LANGUAGE = 'en';
+
 const debug = (ns, ...msg) => console.debug(`[DBG] ${ns.padStart(5, ' ')} |`, ...msg);
 const info = (ns, ...msg) => console.info(`[INF] ${ns.padStart(5, ' ')} |`, ...msg);
 const warn = (ns, ...msg) => console.warn(`[WRN] ${ns.padStart(5, ' ')} |`, ...msg);
@@ -108,10 +111,10 @@ const getDBRequest = async (req) => {
 const loadPackState = async (db) => {
   const store = getStore(db, 'user_data', 'readonly');
   return {
-    balance: await getDBRequest(store.get('en:pack_balance')) ?? 10,
-    lastRefillAt: await getDBRequest(store.get('en:pack_last_refill_at')) ?? Date.now() + 30000,
-    nonce: await getDBRequest(store.get('en:pack_nonce')) ?? '34323458b3a9cfb19add3ffe72824fa0',
-    sig: await getDBRequest(store.get('en:pack_sig')) ?? 'ec74591b86bdbb3b4a166417b13efd4c78e1c7203ea42e88159607b0e2d6ef78',
+    balance: await getDBRequest(store.get(`${LANGUAGE}:pack_balance`)) ?? 10,
+    lastRefillAt: await getDBRequest(store.get(`${LANGUAGE}:pack_last_refill_at`)) ?? Date.now() + 30000,
+    nonce: await getDBRequest(store.get(`${LANGUAGE}:pack_nonce`)) ?? '34323458b3a9cfb19add3ffe72824fa0',
+    sig: await getDBRequest(store.get(`${LANGUAGE}:pack_sig`)) ?? 'ec74591b86bdbb3b4a166417b13efd4c78e1c7203ea42e88159607b0e2d6ef78',
   }
 }
 
@@ -148,7 +151,7 @@ const fetchCards = async (packState) => {
       const resp = await fetch("https://wikigacha.com/api/gacha", {
         "headers": {
           "accept": "*/*",
-          "accept-language": "en;q=0.7",
+          "accept-language": `${LANGUAGE};q=0.7`,
           "cache-control": "no-cache",
           "content-type": "application/json",
         },
@@ -161,7 +164,7 @@ const fetchCards = async (packState) => {
             sig: packState.sig,
           },
           guaranteedSrPlus: 1,
-          lang: "EN"
+          lang: LANGUAGE.toUpperCase(),
         }),
         "method": "POST",
       });
@@ -190,20 +193,20 @@ const fetchCards = async (packState) => {
 const updateTrophies = async (db) => {
   const store = getStore(db, 'user_data', 'readwrite');
   const trophies = [
-    'beginner_luck', 'gacha_addict', 'routine', 'whale', 'leviathan', 
-    'collector', 'curator', 'collection_5000', 'dust_collector', 'shiny', 
-    'super_rare', 'ultra_luck', 'legend', 'desire_sensor', 'god_whim', 
-    'double_rainbow', 'miracle', 'rainbow', 'full_house', 'all_uc', 
-    'dupe_2', 'dupe_3', 'dupe_5', 'elite', 'legendary_vault', 'glass_cannon', 
-    'fortress', 'heavy_hitter', 'iron_wall', 'perfect_being', 'quality_zero', 
-    'weakest', 'origin', 'lucky_seven', 'long_winded', 'minimalist', 'katakana', 
-    'mirror', 'step', 'ads', 'team_grade_c_win', 'team_grade_uc_win', 
-    'team_grade_r_win', 'team_grade_sr_win', 'team_grade_ssr_win', 
-    'team_grade_ur_win', 'team_grade_lr_win', 'raid_clear_1', 'raid_clear_3', 
+    'beginner_luck', 'gacha_addict', 'routine', 'whale', 'leviathan',
+    'collector', 'curator', 'collection_5000', 'dust_collector', 'shiny',
+    'super_rare', 'ultra_luck', 'legend', 'desire_sensor', 'god_whim',
+    'double_rainbow', 'miracle', 'rainbow', 'full_house', 'all_uc',
+    'dupe_2', 'dupe_3', 'dupe_5', 'elite', 'legendary_vault', 'glass_cannon',
+    'fortress', 'heavy_hitter', 'iron_wall', 'perfect_being', 'quality_zero',
+    'weakest', 'origin', 'lucky_seven', 'long_winded', 'minimalist', 'katakana',
+    'mirror', 'step', 'ads', 'team_grade_c_win', 'team_grade_uc_win',
+    'team_grade_r_win', 'team_grade_sr_win', 'team_grade_ssr_win',
+    'team_grade_ur_win', 'team_grade_lr_win', 'raid_clear_1', 'raid_clear_3',
     'raid_clear_5', 'raid_clear_10'
   ];
   info('DB', 'Adding trophies to database...');
-  const output = await getDBRequest(store.put(trophies, 'en:trophies'));
+  const output = await getDBRequest(store.put(trophies, `${LANGUAGE}:trophies`));
   info('DB', 'Trophies added', output);
 }
 
@@ -212,7 +215,7 @@ const updateTrophies = async (db) => {
  * @param {number} count
  */
 const updateCardCount = async (db, count = 1) => {
-  const store = getStore(db, 'cards_en', 'readwrite');
+  const store = getStore(db, `cards_${LANGUAGE}`, 'readwrite');
   const keys = await getDBRequest(store.getAllKeys());
   for (const key of keys) {
     if (typeof key === 'number') {
@@ -235,7 +238,7 @@ const updateStat = async (db, pulls = 9999, ads = 99) => {
     totalPulls: pulls,
     totalAdsWatched: ads,
   }
-  await getDBRequest(store.put(stats));
+  await getDBRequest(store.put(stats, `${LANGUAGE}:stats`));
 };
 
 const mainLoop = async (times = 1) => {
@@ -249,7 +252,7 @@ const mainLoop = async (times = 1) => {
     const resp = await fetchCards(packState);
     packState = resp.packState;
 
-    const store = getStore(db, 'cards_en', 'readwrite');
+    const store = getStore(db, `cards_${LANGUAGE}`, 'readwrite');
     const cards = await addCards(store, resp.cards);
     /** @type {Map<string, Card[]>} */
     const emptyMap = new Map()
