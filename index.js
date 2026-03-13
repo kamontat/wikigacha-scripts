@@ -245,6 +245,7 @@ const mainLoop = async (times = 1) => {
       info('CARD', `Rarity: ${rarity.padEnd(3, ' ')} ${cards.length}`);
     });
 
+    const duration = randomDelay();
     info('MAIN', `Iteration #${i + 1} completed, waiting ${duration} ms for next iteration...`);
     await wait(duration);
   }
