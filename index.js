@@ -116,47 +116,6 @@ const loadPackState = async (db) => {
 }
 
 /**
- * @param {IDBDatabase} db
- */
-const updateTrophies = async (db) => {
-  const store = getStore(db, 'user_data', 'readwrite');
-  const trophies = [
-    'beginner_luck', 'gacha_addict', 'routine', 'whale', 'leviathan', 
-    'collector', 'curator', 'collection_5000', 'dust_collector', 'shiny', 
-    'super_rare', 'ultra_luck', 'legend', 'desire_sensor', 'god_whim', 
-    'double_rainbow', 'miracle', 'rainbow', 'full_house', 'all_uc', 
-    'dupe_2', 'dupe_3', 'dupe_5', 'elite', 'legendary_vault', 'glass_cannon', 
-    'fortress', 'heavy_hitter', 'iron_wall', 'perfect_being', 'quality_zero', 
-    'weakest', 'origin', 'lucky_seven', 'long_winded', 'minimalist', 'katakana', 
-    'mirror', 'step', 'ads', 'team_grade_c_win', 'team_grade_uc_win', 
-    'team_grade_r_win', 'team_grade_sr_win', 'team_grade_ssr_win', 
-    'team_grade_ur_win', 'team_grade_lr_win', 'raid_clear_1', 'raid_clear_3', 
-    'raid_clear_5', 'raid_clear_10'
-  ];
-  info('DB', 'Adding trophies to database...');
-  const output = await getDBRequest(store.put(trophies, 'en:trophies'));
-  info('DB', 'Trophies added', output);
-}
-
-/**
- * @param {IDBDatabase} db
- */
-const updateCardCount = async (db) => {
-  const store = getStore(db, 'cards_en', 'readwrite');
-  const keys = await getDBRequest(store.getAllKeys());
-  for (const key of keys) {
-    if (typeof key === 'number') {
-      const card = await getDBRequest(store.get(key));
-      if (card && card.count === undefined) {
-        card.count = 1;
-        await getDBRequest(store.put(card));
-      }
-    }
-  }
-  info('DB', `There are currently ${keys.length} cards in the database.`);
-}
-
-/**
  * @param {IDBObjectStore} store
  * @param {Array<Card>} cards
  * @returns {Promise<Array<Card>>}
@@ -224,6 +183,60 @@ const fetchCards = async (packState) => {
     throw err;
   }
 }
+
+/**
+ * @param {IDBDatabase} db
+ */
+const updateTrophies = async (db) => {
+  const store = getStore(db, 'user_data', 'readwrite');
+  const trophies = [
+    'beginner_luck', 'gacha_addict', 'routine', 'whale', 'leviathan', 
+    'collector', 'curator', 'collection_5000', 'dust_collector', 'shiny', 
+    'super_rare', 'ultra_luck', 'legend', 'desire_sensor', 'god_whim', 
+    'double_rainbow', 'miracle', 'rainbow', 'full_house', 'all_uc', 
+    'dupe_2', 'dupe_3', 'dupe_5', 'elite', 'legendary_vault', 'glass_cannon', 
+    'fortress', 'heavy_hitter', 'iron_wall', 'perfect_being', 'quality_zero', 
+    'weakest', 'origin', 'lucky_seven', 'long_winded', 'minimalist', 'katakana', 
+    'mirror', 'step', 'ads', 'team_grade_c_win', 'team_grade_uc_win', 
+    'team_grade_r_win', 'team_grade_sr_win', 'team_grade_ssr_win', 
+    'team_grade_ur_win', 'team_grade_lr_win', 'raid_clear_1', 'raid_clear_3', 
+    'raid_clear_5', 'raid_clear_10'
+  ];
+  info('DB', 'Adding trophies to database...');
+  const output = await getDBRequest(store.put(trophies, 'en:trophies'));
+  info('DB', 'Trophies added', output);
+}
+
+/**
+ * @param {IDBDatabase} db
+ * @param {number} count
+ */
+const updateCardCount = async (db, count = 1) => {
+  const store = getStore(db, 'cards_en', 'readwrite');
+  const keys = await getDBRequest(store.getAllKeys());
+  for (const key of keys) {
+    if (typeof key === 'number') {
+      const card = await getDBRequest(store.get(key));
+      if (card && card.count === undefined) {
+        card.count = count;
+        await getDBRequest(store.put(card));
+      }
+    }
+  }
+  info('DB', `There are currently ${keys.length} cards in the database.`);
+}
+
+/**
+ * @param {IDBDatabase} db
+ */
+const updateStat = async (db, pulls = 9999, ads = 99) => {
+  const store = getStore(db, 'user_data', 'readwrite');
+  const stats = {
+    totalPulls: pulls,
+    totalAdsWatched: ads,
+  }
+  await getDBRequest(store.put(stats));
+};
 
 const mainLoop = async (times = 1) => {
   info('MAIN', `Starting main loop`);
